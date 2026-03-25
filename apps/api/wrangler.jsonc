@@ -3,36 +3,43 @@
   "name": "api",
   "main": "src/index.ts",
   "compatibility_date": "2026-03-25",
-  // "compatibility_flags": [
-  //   "nodejs_compat"
-  // ],
-  // "vars": {
-  //   "MY_VAR": "my-variable"
-  // },
-  // "kv_namespaces": [
-  //   {
-  //     "binding": "MY_KV_NAMESPACE",
-  //     "id": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-  //   }
-  // ],
-  // "r2_buckets": [
-  //   {
-  //     "binding": "MY_BUCKET",
-  //     "bucket_name": "my-bucket"
-  //   }
-  // ],
-  // "d1_databases": [
-  //   {
-  //     "binding": "MY_DB",
-  //     "database_name": "my-database",
-  //     "database_id": ""
-  //   }
-  // ],
-  // "ai": {
-  //   "binding": "AI"
-  // },
-  // "observability": {
-  //   "enabled": true,
-  //   "head_sampling_rate": 1
-  // }
+  "vars": {
+    "ENVIRONMENT": "development",
+    "PUBLIC_API_BASE_URL": "https://earthbound-irritatedly-alethea.ngrok-free.dev"
+  },
+  "kv_namespaces": [
+    {
+      "binding": "JOB_KV",
+      "id": "0f5fad39d76b4fe6b4ddac45a5aaa28d"
+    },
+    {
+      "binding": "RATE_LIMIT_KV",
+      "id": "5d8e8e58707c4853b73b2ee5da350441"
+    }
+  ],
+  "env": {
+    "production": {
+      "name": "api-production",
+      "vars": {
+        "ENVIRONMENT": "production",
+        "PUBLIC_API_BASE_URL": "https://clipart-api.divyanshthakur.com"
+      },
+      "routes": [
+        {
+          "pattern": "clipart-api.divyanshthakur.com",
+          "custom_domain": true
+        }
+      ],
+      "kv_namespaces": [
+        {
+          "binding": "JOB_KV",
+          "id": "1e2d9dbbf4db40dd98c410bd0423dc96"
+        },
+        {
+          "binding": "RATE_LIMIT_KV",
+          "id": "54aa1b03b3a34ed8aef98d0439a6b308"
+        }
+      ]
+    }
+  }
 }

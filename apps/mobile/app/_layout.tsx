@@ -11,7 +11,14 @@ import {
   Inter_600SemiBold,
   Inter_700Bold,
 } from '@expo-google-fonts/inter';
+import { ThemeProvider, DarkTheme } from '@react-navigation/native';
+import { cssInterop } from 'react-native-css-interop';
 import '../global.css';
+
+cssInterop(GestureHandlerRootView, {
+  className: 'style',
+});
+
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -35,10 +42,12 @@ export default function RootLayout() {
   }
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
+    <GestureHandlerRootView className="flex-1 bg-background">
       <SafeAreaProvider>
-        <StatusBar style="light" />
-        <Stack screenOptions={{ headerShown: false }} />
+        <ThemeProvider value={DarkTheme}>
+          <StatusBar style="light" />
+          <Stack screenOptions={{ headerShown: false }} />
+        </ThemeProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

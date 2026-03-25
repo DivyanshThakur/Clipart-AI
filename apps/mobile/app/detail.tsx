@@ -9,11 +9,13 @@ import { Button } from '../components/ui/Button';
 export default function ImageDetailScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
-  const name = params.name as string || 'Anime';
+  const name = params.name as string || 'Clipart';
+  const image = params.image as string;
 
   // Mock images for demonstration of the transition effect
+  // In a real app, 'original' would also come from params or state
   const original = 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=1024';
-  const generated = 'https://images.unsplash.com/photo-1578632292335-df3abbb0d586?w=1024';
+  const generated = image || 'https://images.unsplash.com/photo-1578632292335-df3abbb0d586?w=1024';
 
   return (
     <SafeAreaView className="flex-1 bg-background" edges={['top', 'bottom']}>

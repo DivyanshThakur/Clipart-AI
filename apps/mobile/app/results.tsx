@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, FlatList, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ChevronLeft, Download, Share2, Loader2 } from 'lucide-react-native';
+import { ChevronLeft, Loader2 } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { interopIcon } from '../lib/icons';
 
@@ -26,7 +26,6 @@ export default function ResultsScreen() {
   const [results, setResults] = useState<any[]>(
     STYLES_DATA.map(s => ({ ...s, status: 'generating' as const }))
   );
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   // Simulation of generation process
   useEffect(() => {
@@ -43,11 +42,6 @@ export default function ResultsScreen() {
         const isError = index > 3 && Math.random() > 0.85;
         next[index].status = isError ? 'error' : 'success';
 
-        // Auto-select successful ones if they just completed
-        if (!isError) {
-          setSelectedIds(s => [...s, next[index].id]);
-        }
-
         return next;
       });
       index++;
@@ -61,11 +55,6 @@ export default function ResultsScreen() {
   const isGenerating = completedCount < results.length;
   const progressPercent = (completedCount / results.length) * 100;
 
-  const toggleSelect = (id: string) => {
-    setSelectedIds(prev =>
-      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
-    );
-  };
 
   const navigateToDetail = (item: any) => {
     router.push({
@@ -79,7 +68,6 @@ export default function ResultsScreen() {
     // In a real app, this would trigger re-fetch
     setTimeout(() => {
       setResults(prev => prev.map(r => r.id === id ? { ...r, status: 'success' } : r));
-      setSelectedIds(s => [...s, id]);
     }, 2000);
   };
 
@@ -142,12 +130,9 @@ export default function ResultsScreen() {
                   name={item.name}
                   image={item.image}
                   status={item.status}
-                  selected={selectedIds.includes(item.id)}
-                  onSelect={(id) => {
+                  onPress={(id) => {
                     if (item.status === 'success') {
                       navigateToDetail(item);
-                    } else {
-                      toggleSelect(id);
                     }
                   }}
                   onRetry={handleRetry}
@@ -157,37 +142,8 @@ export default function ResultsScreen() {
             showsVerticalScrollIndicator={false}
           />
         </View>
-        {/* Action Button Container */}
-        <View className="mt-auto mb-8 px-6 max-w-[500px] w-full self-center">
-          {isGenerating ? (
-            <Button
-              disabled
-              className="py-6 w-full rounded-full bg-surface_container_high"
-              leftIcon={<Loader2 size={20} color="#a1a1af" className="animate-spin" />}
-            >
-
-              <Text className="text-[14px] font-bold text-on_surface_variant">Generating...</Text>
-            </Button>
-          ) : (
-            <View className="flex-row gap-4 justify-between items-center space-x-4">
-              <Button
-                className="flex-[1.5] py-6 rounded-full bg-tertiary border-0"
-                leftIcon={<Download size={20} color="#FFFFFF" className="mb-1" />}
-              >
-
-                <Text className="text-[14px] font-bold text-white">Download All</Text>
-              </Button>
-              <Button
-                variant="ghost"
-                className="flex-1 py-6 rounded-full border border-outline"
-                leftIcon={<Share2 size={20} color="#e5e2e1" className="mb-1" />}
-              >
-
-                <Text className="text-[14px] font-bold text-on_surface">Share</Text>
-              </Button>
-            </View>
-          )}
-        </View>
+        {/* Minimal padding at bottom */}
+        <View className="mb-8" />
       </View>
     </SafeAreaView>
   );

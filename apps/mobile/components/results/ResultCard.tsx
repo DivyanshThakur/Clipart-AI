@@ -1,18 +1,17 @@
 import { View, Text, TouchableOpacity } from 'react-native';
 import { Image } from 'expo-image';
-import { Check, AlertCircle } from 'lucide-react-native';
+import { AlertCircle } from 'lucide-react-native';
 
 interface ResultCardProps {
   id: string;
   name: string;
   image?: string;
   status: 'generating' | 'success' | 'error';
-  selected: boolean;
-  onSelect: (id: string) => void;
+  onPress: (id: string) => void;
   onRetry: (id: string) => void;
 }
 
-export function ResultCard({ id, name, image, status, selected, onSelect, onRetry }: ResultCardProps) {
+export function ResultCard({ id, name, image, status, onPress, onRetry }: ResultCardProps) {
   const isSuccess = status === 'success';
   const isError = status === 'error';
   const isGenerating = status === 'generating';
@@ -20,10 +19,9 @@ export function ResultCard({ id, name, image, status, selected, onSelect, onRetr
   return (
     <TouchableOpacity
       activeOpacity={0.8}
-      onPress={() => isSuccess ? onSelect(id) : isError ? onRetry(id) : null}
+      onPress={() => isSuccess ? onPress(id) : isError ? onRetry(id) : null}
       className={`relative aspect-square flex-1 m-1.5 overflow-hidden rounded-[24px] border-2 ${
-        isError ? 'border-error/50 bg-error/5' : 
-        selected ? 'border-tertiary bg-surface_container' : 'border-transparent bg-surface_container'
+        isError ? 'border-error/50 bg-error/5' : 'border-transparent bg-surface_container'
       }`}
     >
       {isSuccess && image ? (
@@ -63,12 +61,6 @@ export function ResultCard({ id, name, image, status, selected, onSelect, onRetr
         </View>
       )}
 
-      {/* Selection Indicator */}
-      {isSuccess && selected && (
-        <View className="absolute right-3 top-3 h-7 w-7 items-center justify-center rounded-full bg-tertiary">
-          <Check size={16} color="#FFFFFF" strokeWidth={3} />
-        </View>
-      )}
     </TouchableOpacity>
   );
 }

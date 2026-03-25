@@ -3,7 +3,9 @@ import type { AppBindings, AppVariables } from './bindings';
 import { corsMiddleware } from './middleware/cors';
 import { errorHandler } from './middleware/error-handler';
 import { generateRateLimitMiddleware, uploadRateLimitMiddleware } from './middleware/rate-limit';
+import generateRoute from './routes/generate';
 import healthRoute from './routes/health';
+import jobRoute from './routes/job';
 import uploadRoute from './routes/upload';
 
 const app = new Hono<{ Bindings: AppBindings; Variables: AppVariables }>();
@@ -26,5 +28,7 @@ app.get('/', (c) =>
 
 app.route('/health', healthRoute);
 app.route('/upload', uploadRoute);
+app.route('/generate', generateRoute);
+app.route('/job', jobRoute);
 
 export default app;

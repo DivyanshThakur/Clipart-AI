@@ -2,6 +2,7 @@ import type { AppBindings } from '../bindings';
 import { ApiError, ERROR_CODES } from '../constants/errors';
 import { JOB_TTL_SECONDS } from '../constants/kv';
 import type { JobRecord, StyleKey, StyleState } from '../types/job';
+import type { ReplicateWebhookPayload } from '../types/replicate';
 
 function createProcessingStyleState(): StyleState {
   return {
@@ -10,6 +11,18 @@ function createProcessingStyleState(): StyleState {
     predictionId: null,
     status: 'processing',
   };
+}
+
+function normalizeOutputUrl(output: ReplicateWebhookPayload['output']): string | null {
+  if (typeof output === 'string') {
+    return output;
+  }
+
+  if (Array.isArray(output)) {
+    return output.find((entry) => typeof entry === 'string') ?? null;
+  }
+
+  return null;
 }
 
 async function persistJob(env: AppBindings, job: JobRecord): Promise<void> {
@@ -122,6 +135,49 @@ export async function markStyleFailure(
   styleState.error = params.error;
   styleState.outputUrl = null;
   styleState.status = 'failure';
+
+  await persistJob(env, job);
+}
+
+export async function applyWebhookUpdate(
+  env: AppBindings,
+  params: {
+    jobId: string;
+    style: StyleKey;
+    payload: ReplicateWebhookPayload;
+  }
+): Promise<void> {
+  const job = await getJob(env, params.jobId);
+
+  if (!job) {
+    throw new ApiError(404, ERROR_CODES.JOB_NOT_FOUND, 'Job not found.');
+  }
+
+  const styleState = job.styles[params.style];
+
+  if (!styleState) {
+    throw new ApiError(404, ERROR_CODES.JOB_NOT_FOUND, 'Style state not found for this job.');
+  }
+
+  if (styleState.status === 'success' || styleState.status === 'failure') {
+    return;
+  }
+
+  if (params.payload.id) {
+    styleState.predictionId = params.payload.id;
+  }
+
+  if (params.payload.status === 'succeeded') {
+    styleState.status = 'success';
+    styleState.outputUrl = normalizeOutputUrl(params.payload.output);
+    styleState.error = null;
+  } else if (params.payload.status === 'failed' || params.payload.status === 'canceled') {
+    styleState.status = 'failure';
+    styleState.outputUrl = null;
+    styleState.error = params.payload.error ?? 'Prediction failed.';
+  } else {
+    return;
+  }
 
   await persistJob(env, job);
 }

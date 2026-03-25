@@ -7,6 +7,7 @@ import generateRoute from './routes/generate';
 import healthRoute from './routes/health';
 import jobRoute from './routes/job';
 import uploadRoute from './routes/upload';
+import webhookRoute from './routes/webhook';
 
 const app = new Hono<{ Bindings: AppBindings; Variables: AppVariables }>();
 
@@ -30,5 +31,6 @@ app.route('/health', healthRoute);
 app.route('/upload', uploadRoute);
 app.route('/generate', generateRoute);
 app.route('/job', jobRoute);
+app.route('/webhook', webhookRoute);
 
 export default app;

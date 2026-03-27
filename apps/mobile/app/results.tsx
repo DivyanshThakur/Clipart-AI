@@ -1,150 +1,179 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, FlatList, useWindowDimensions } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { ChevronLeft, Loader2 } from 'lucide-react-native';
-import { useRouter } from 'expo-router';
-import { interopIcon } from '../lib/icons';
-
-import { ResultCard } from '../components/results/ResultCard';
+import React, { useMemo } from 'react';
+import { FlatList, Text, View } from 'react-native';
+import { Download, Share2 } from 'lucide-react-native';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useShallow } from 'zustand/react/shallow';
+import { AppScreen, ScreenContainer } from '../components/layout/AppScreen';
+import { ScreenHeader } from '../components/navigation/ScreenHeader';
+import { StyleResultCard } from '../components/StyleResultCard';
 import { Button } from '../components/ui/Button';
+import { useDownload } from '../hooks/useDownload';
+import { useGeneration } from '../hooks/useGeneration';
+import { useGoHome } from '../hooks/useGoHome';
+import { useHistoryJob } from '../hooks/useHistoryJob';
+import { useResponsiveGrid } from '../hooks/useResponsiveGrid';
+import { useGenerationStore } from '../store/generationStore';
+import type { StyleKey, StyleResult } from '../types';
 
-interopIcon(Loader2);
-
-// Mock data using high-quality unsplash images for demo
-const STYLES_DATA = [
-  { id: 'cartoons', name: 'Cartoon', image: 'https://images.unsplash.com/photo-1581833971358-2c8b550f87b3?w=800' },
-  { id: 'anime', name: 'Anime', image: 'https://images.unsplash.com/photo-1578632292335-df3abbb0d586?w=800' },
-  { id: 'pixel_art', name: 'Pixel Art', image: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=800' },
-  { id: 'flat_illustration', name: 'Flat Illustration', image: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800' },
-  { id: 'sketch', name: 'Sketch', image: 'https://images.unsplash.com/photo-1513364776144-60967b0f800f?w=800' },
-  { id: 'comic_book', name: 'Comic Book', image: 'https://images.unsplash.com/photo-1588497859490-85d1c17db96d?w=800' },
-];
+type GridItem = StyleResult | { style: `placeholder-${number}`; isPlaceholder: true };
 
 export default function ResultsScreen() {
   const router = useRouter();
-  const { width } = useWindowDimensions();
-  const [results, setResults] = useState<any[]>(
-    STYLES_DATA.map(s => ({ ...s, status: 'generating' as const }))
+  const params = useLocalSearchParams();
+  const goHome = useGoHome();
+  const { selectedStyles, results, imageUri, error } = useGenerationStore(
+    useShallow((state) => ({
+      selectedStyles: state.selectedStyles,
+      results: state.results,
+      imageUri: state.imageUri,
+      error: state.error,
+    }))
+  );
+  const { retryFailedStyles } = useGeneration();
+  const { downloadAll, shareImage } = useDownload();
+  const historyJobId = typeof params.jobId === 'string' ? params.jobId : null;
+  const historyJob = useHistoryJob(historyJobId);
+
+  const resolvedSelectedStyles = useMemo(
+    () => (historyJobId ? historyJob?.selectedStyles ?? [] : selectedStyles),
+    [historyJob, historyJobId, selectedStyles]
+  );
+  const resolvedResults = useMemo(
+    () => (historyJobId ? historyJob?.styles ?? null : results),
+    [historyJob, historyJobId, results]
+  );
+  const resolvedError = historyJobId ? null : error;
+
+  const selectedResults = useMemo(
+    () => resolvedSelectedStyles.map((style) => resolvedResults?.[style]).filter(Boolean) as StyleResult[],
+    [resolvedResults, resolvedSelectedStyles]
   );
 
-  // Simulation of generation process
-  useEffect(() => {
-    let index = 0;
-    const interval = setInterval(() => {
-      if (index >= results.length) {
-        clearInterval(interval);
-        return;
-      }
+  const completedCount = selectedResults.filter(
+    (result) => result.status === 'success' || result.status === 'failure'
+  ).length;
+  const progressPercent = selectedResults.length === 0 ? 0 : (completedCount / selectedResults.length) * 100;
+  const allSettled =
+    selectedResults.length > 0 &&
+    selectedResults.every((result) => result.status === 'success' || result.status === 'failure');
+  const successfulResults = selectedResults.filter(
+    (result): result is StyleResult & { outputUrl: string } => result.status === 'success' && !!result.outputUrl
+  );
+  const { horizontalPaddingClassName, numColumns, paddedItems } =
+    useResponsiveGrid<GridItem, GridItem>(
+      selectedResults,
+      (index) => ({ style: `placeholder-${index}`, isPlaceholder: true })
+    );
 
-      setResults(prev => {
-        const next = [...prev];
-        // Simulate a mix of success and rare occasional error for demo
-        const isError = index > 3 && Math.random() > 0.85;
-        next[index].status = isError ? 'error' : 'success';
-
-        return next;
-      });
-      index++;
-    }, 1200);
-
-    return () => clearInterval(interval);
-  }, []);
-
-  const completedResults = results.filter(r => r.status !== 'generating');
-  const completedCount = completedResults.length;
-  const isGenerating = completedCount < results.length;
-  const progressPercent = (completedCount / results.length) * 100;
-
-
-  const navigateToDetail = (item: any) => {
+  const navigateToDetail = (style: StyleKey) => {
     router.push({
       pathname: '/detail',
-      params: { id: item.id, name: item.name, image: item.image }
+      params: historyJobId ? { jobId: historyJobId, style } : { style },
     });
   };
 
-  const handleRetry = (id: string) => {
-    setResults(prev => prev.map(r => r.id === id ? { ...r, status: 'generating' } : r));
-    // In a real app, this would trigger re-fetch
-    setTimeout(() => {
-      setResults(prev => prev.map(r => r.id === id ? { ...r, status: 'success' } : r));
-    }, 2000);
-  };
-
-  // Responsive Grid Logic
-  const numColumns = width < 450 ? 2 : width < 900 ? 3 : 4;
-  const horizontalPadding = width < 500 ? 'px-4' : 'px-8';
-
-  // Pad data with placeholders for grid alignment
-  const paddedResults: any[] = [...results];
-  const numToPad = (numColumns - (results.length % numColumns)) % numColumns;
-  for (let i = 0; i < numToPad; i++) {
-    paddedResults.push({ id: `placeholder-${i}`, isPlaceholder: true });
-  }
-
   return (
-    <SafeAreaView className="flex-1 bg-background" edges={['top', 'bottom']}>
+    <AppScreen>
       <View className="flex-1 items-center">
-        <View
-          className={`w-full ${horizontalPadding}`}
-          style={{ maxWidth: 1200 }}
-        >
-          {/* Results Grid */}
+        <ScreenContainer horizontalPaddingClassName={horizontalPaddingClassName}>
           <FlatList
             key={numColumns}
-            data={paddedResults}
+            data={paddedItems}
             numColumns={numColumns}
-            keyExtractor={item => item.id}
-            ListHeaderComponent={(
+            keyExtractor={(item) => item.style}
+            ListHeaderComponent={
               <View className="mb-6">
-                {/* Header */}
-                <View className="mb-2 h-14 flex-row items-center justify-between">
-                  <TouchableOpacity
-                    onPress={() => router.back()}
-                    className="h-10 w-10 items-center justify-center rounded-full bg-surface_container_low active:opacity-70"
-                  >
-                    <ChevronLeft size={20} color="#e5e2e1" />
-                  </TouchableOpacity>
-                  <Text className="font-bold text-[20px] text-on_surface">Your Cliparts</Text>
-                  <Text className="w-10 text-right font-medium text-on_surface_variant">
-                    {completedCount}/{results.length}
-                  </Text>
-                </View>
+                <ScreenHeader
+                  title="Your Cliparts"
+                  onBack={() => router.back()}
+                  onHome={goHome}
+                  rightSlot={
+                    <View className="min-w-10 items-end justify-center">
+                      <Text className="text-right font-medium text-on_surface_variant">
+                        {completedCount}/{resolvedSelectedStyles.length}
+                      </Text>
+                    </View>
+                  }
+                />
 
-                {/* Progress Bar */}
                 <View className="relative h-1 w-full rounded-full bg-surface_container">
                   <View
                     style={{ width: `${progressPercent}%` }}
                     className="h-full rounded-full bg-tertiary"
                   />
                 </View>
+
+                <Text className="mt-3 text-sm text-on_surface_variant">
+                  {historyJobId
+                    ? historyJob
+                      ? 'Saved results from your history.'
+                      : 'Loading saved job...'
+                    : imageUri
+                      ? allSettled
+                        ? 'All selected styles have finished.'
+                        : 'Your results are updating live while the backend finishes processing.'
+                      : 'Select an image to start generating.'}
+                </Text>
+
+                {resolvedError ? (
+                  <View className="mt-4 rounded-2xl border border-error/60 bg-error/10 px-4 py-3">
+                    <Text className="text-sm text-error">{resolvedError}</Text>
+                  </View>
+                ) : null}
+
+                {allSettled && successfulResults.length > 0 ? (
+                  <View className="mt-5 flex-row gap-3">
+                    <Button
+                      className="flex-1 rounded-2xl bg-tertiary"
+                      leftIcon={<Download size={18} color="#ffffff" />}
+                      onPress={() => {
+                        void downloadAll(successfulResults);
+                      }}
+                    >
+                      Download All
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="flex-1 rounded-2xl"
+                      leftIcon={<Share2 size={18} color="#e5e2e1" />}
+                      onPress={() => {
+                        void shareImage(successfulResults[0].outputUrl);
+                      }}
+                    >
+                      Share
+                    </Button>
+                  </View>
+                ) : null}
               </View>
-            )}
-            renderItem={({ item }: { item: any }) => {
-              if (item.isPlaceholder) {
-                return <View className="flex-1 m-1.5" />;
+            }
+            renderItem={({ item }) => {
+              if ('isPlaceholder' in item && item.isPlaceholder) {
+                return <View className="m-1.5 flex-1" />;
               }
+
+              const resultItem = item as StyleResult;
+
               return (
-                <ResultCard
-                  id={item.id}
-                  name={item.name}
-                  image={item.image}
-                  status={item.status}
-                  onPress={(id) => {
-                    if (item.status === 'success') {
-                      navigateToDetail(item);
-                    }
+                <StyleResultCard
+                  result={resultItem}
+                  onPress={(style) => {
+                    navigateToDetail(style);
                   }}
-                  onRetry={handleRetry}
+                  onRetry={
+                    historyJobId
+                      ? undefined
+                      : (style) => {
+                          void retryFailedStyles([style]);
+                        }
+                  }
                 />
               );
             }}
             showsVerticalScrollIndicator={false}
           />
-        </View>
-        {/* Minimal padding at bottom */}
+        </ScreenContainer>
         <View className="mb-8" />
       </View>
-    </SafeAreaView>
+    </AppScreen>
   );
 }

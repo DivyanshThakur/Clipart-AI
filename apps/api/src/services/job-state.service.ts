@@ -62,7 +62,10 @@ export async function startGeneration(
     jobId: string;
     styles: StyleKey[];
   }
-): Promise<JobRecord> {
+): Promise<{
+  job: JobRecord;
+  queuedStyles: StyleKey[];
+}> {
   const job = await getJob(env, params.jobId);
 
   if (!job) {
@@ -73,19 +76,36 @@ export async function startGeneration(
     throw new ApiError(400, ERROR_CODES.INVALID_JOB_ID, 'Job does not have an uploaded image.');
   }
 
-  if (job.generationStartedAt) {
-    throw new ApiError(409, ERROR_CODES.GENERATION_ALREADY_STARTED, 'Generation already started for this job.');
+  const queuedStyles: StyleKey[] = [];
+
+  if (!job.generationStartedAt) {
+    job.generationStartedAt = new Date().toISOString();
   }
 
-  job.generationStartedAt = new Date().toISOString();
-
   for (const style of params.styles) {
-    job.styles[style] = createProcessingStyleState();
+    const existingState = job.styles[style];
+
+    if (!existingState || existingState.status === 'failure') {
+      job.styles[style] = createProcessingStyleState();
+      queuedStyles.push(style);
+      continue;
+    }
+
+    if (existingState.status === 'processing') {
+      continue;
+    }
+
+    if (existingState.status === 'success') {
+      continue;
+    }
   }
 
   await persistJob(env, job);
 
-  return job;
+  return {
+    job,
+    queuedStyles,
+  };
 }
 
 export async function markStylePredictionCreated(

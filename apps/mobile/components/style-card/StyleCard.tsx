@@ -1,13 +1,14 @@
-import { View, Text, Pressable } from 'react-native';
+import { type ImageSourcePropType, Pressable, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import { MaterialIcons } from '@expo/vector-icons';
+import type { StyleKey } from '../../types';
 
 interface StyleCardProps {
-  id: string;
+  id: StyleKey;
   name: string;
-  image: any;
+  image: ImageSourcePropType;
   selected: boolean;
-  onSelect: (id: string) => void;
+  onSelect: (id: StyleKey) => void;
 }
 
 export function StyleCard({ id, name, image, selected, onSelect }: StyleCardProps) {

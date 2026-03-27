@@ -6,8 +6,7 @@ import { STYLE_KEYS } from '../constants/styles';
 import { apiZodValidator } from '../middleware/zod-validation';
 import { startGeneration } from '../services/job-state.service';
 import { enqueuePredictions } from '../services/replicate-predictions.service';
-import type { GenerateRequestBody, GenerateResponseBody } from '../types/api';
-import type { StyleKey } from '../types/job';
+import type { GenerateResponseBody } from '../types/api';
 
 const generateRequestSchema = z.object({
   jobId: z.string().min(1, 'jobId is required.'),
@@ -29,15 +28,18 @@ generateRoute.post(
   async (c) => {
     const body = c.req.valid('json');
     const styles = body.styles;
-    const job = await startGeneration(c.env, {
+    const { job, queuedStyles } = await startGeneration(c.env, {
       jobId: body.jobId,
       styles,
     });
 
-    c.executionCtx.waitUntil(enqueuePredictions(c.env, job, styles));
+    if (queuedStyles.length > 0) {
+      c.executionCtx.waitUntil(enqueuePredictions(c.env, job, queuedStyles));
+    }
 
     const response: GenerateResponseBody = {
       jobId: job.jobId,
+      queuedStyles,
       status: 'processing',
     };
 

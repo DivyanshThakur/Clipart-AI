@@ -3,6 +3,10 @@ import { RATE_LIMIT_TTL_SECONDS } from '../constants/kv';
 
 export type RateLimitScope = 'generate' | 'upload';
 
+function isRateLimitDisabled(env: AppBindings): boolean {
+  return env.ENVIRONMENT !== 'production';
+}
+
 function getHourBucket(date: Date): string {
   return [
     date.getUTCFullYear(),
@@ -16,14 +20,30 @@ function getRateLimitKey(scope: RateLimitScope, ip: string): string {
   return `ratelimit:${scope}:${ip}:${getHourBucket(new Date())}`;
 }
 
-export async function getRateLimitCount(env: AppBindings, scope: RateLimitScope, ip: string): Promise<number> {
+export async function getRateLimitCount(
+  env: AppBindings,
+  scope: RateLimitScope,
+  ip: string,
+): Promise<number> {
+  if (isRateLimitDisabled(env)) {
+    return 0;
+  }
+
   const key = getRateLimitKey(scope, ip);
   const currentValue = await env.RATE_LIMIT_KV.get(key);
 
   return currentValue ? Number(currentValue) : 0;
 }
 
-export async function incrementRateLimitCount(env: AppBindings, scope: RateLimitScope, ip: string): Promise<number> {
+export async function incrementRateLimitCount(
+  env: AppBindings,
+  scope: RateLimitScope,
+  ip: string,
+): Promise<number> {
+  if (isRateLimitDisabled(env)) {
+    return 0;
+  }
+
   const key = getRateLimitKey(scope, ip);
   const nextValue = (await getRateLimitCount(env, scope, ip)) + 1;
 

@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Pressable } from 'react-native';
+import { View, Pressable, Text } from 'react-native';
 import { Image } from 'expo-image';
 import { X } from 'lucide-react-native';
 
@@ -16,11 +16,9 @@ export function ImagePreview({ uri, onRemove }: ImagePreviewProps) {
         contentFit="cover"
         style={{ width: '100%', height: 350 }}
       />
-      
       <Pressable
         onPress={onRemove}
         className="absolute right-4 top-4 h-10 w-10 items-center justify-center rounded-full bg-black/50 active:opacity-70"
-        style={{ backdropFilter: 'blur(10px)' }}
       >
         <X size={20} color="#FFFFFF" strokeWidth={2.5} />
       </Pressable>

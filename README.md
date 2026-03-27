@@ -1,68 +1,91 @@
 # Clipart AI
 
-This is a monorepo powered by [Turborepo](https://turborepo.org/), containing our React Native mobile application and our Hono backend.
+This monorepo contains:
 
-## What's inside?
+- `apps/mobile`: an Expo mobile app
+- `apps/api`: a Hono API running on Cloudflare Workers
 
-This repository includes the following apps and packages:
-
-### Apps
-
-- `mobile`: a [React Native Expo](https://expo.dev/) application.
-- `api`: a [Hono](https://hono.dev/) backend application designed to run on [Cloudflare Workers](https://workers.cloudflare.com/).
-
-### Packages
-
-- `@repo/eslint-config`: shared `eslint` configurations.
-- `@repo/typescript-config`: shared `tsconfig.json`s used throughout the monorepo.
-
-## Prerequisites
-
-- [Node.js](https://nodejs.org/en/) (v18 or newer recommended)
-- [pnpm](https://pnpm.io/) (used for package management)
-- [Wrangler](https://developers.cloudflare.com/workers/wrangler/) (for Cloudflare Workers local development and deployment)
-
-## Getting Started
-
-First, install all dependencies at the root of the repository:
+## Install
 
 ```sh
 pnpm install
 ```
 
-### Developing
+## How The App Connects
 
-To start the development servers for all applications and packages simultaneously, run:
+There are two different URLs in this project, and they serve different jobs:
+
+- `EXPO_PUBLIC_API_URL`: used by the mobile app for normal API requests like `/upload`, `/generate`, and `/job/:id/status`
+- `PUBLIC_API_BASE_URL`: used by the API when it tells Replicate where to send webhooks back
+
+That split matters in local development:
+
+- the mobile app can call a local Worker URL such as `http://localhost:8787`
+- Replicate cannot call your localhost, so the API must use a public tunnel URL for webhooks
+
+## Local Setup
+
+### 1. Mobile env
+
+Copy [apps/mobile/.env.example](/Users/divyanshthakur/Documents/GitHub/clipart-ai/apps/mobile/.env.example) to `apps/mobile/.env.local`.
+
+Use one of these values for `EXPO_PUBLIC_API_URL`:
+
+- iOS simulator on the same Mac: `http://localhost:8787`
+- Android emulator: usually `http://10.0.2.2:8787`
+- Physical phone on the same Wi-Fi: `http://YOUR_COMPUTER_LAN_IP:8787`
+
+If you use a physical device, start the Worker with `--ip 0.0.0.0` so your phone can reach it:
+
+```sh
+pnpm --filter @clipart-ai/api exec wrangler dev --ip 0.0.0.0 --port 8787
+```
+
+### 2. API secrets for local dev
+
+Copy [apps/api/.dev.vars.example](/Users/divyanshthakur/Documents/GitHub/clipart-ai/apps/api/.dev.vars.example) to `apps/api/.dev.vars` and fill in:
+
+- `REPLICATE_API_TOKEN`
+- `REPLICATE_WEBHOOK_SECRET`
+
+`PUBLIC_API_BASE_URL` for local dev already comes from [apps/api/wrangler.jsonc](/Users/divyanshthakur/Documents/GitHub/clipart-ai/apps/api/wrangler.jsonc), and should be set to your public tunnel URL.
+
+### 3. Start the apps
+
+API:
+
+```sh
+pnpm --filter @clipart-ai/api dev
+```
+
+Mobile:
+
+```sh
+pnpm --filter @clipart-ai/mobile dev
+```
+
+## Production Setup
+
+For deployed Workers, set Replicate secrets with Wrangler:
+
+```sh
+pnpm --filter @clipart-ai/api exec wrangler secret put REPLICATE_API_TOKEN --env production
+pnpm --filter @clipart-ai/api exec wrangler secret put REPLICATE_WEBHOOK_SECRET --env production
+```
+
+Production `PUBLIC_API_BASE_URL` is configured in [apps/api/wrangler.jsonc](/Users/divyanshthakur/Documents/GitHub/clipart-ai/apps/api/wrangler.jsonc) and should match the deployed API domain.
+
+For production mobile builds, set:
+
+```txt
+EXPO_PUBLIC_API_URL=https://clipart-api.divyanshthakur.com
+```
+
+## Useful Commands
 
 ```sh
 pnpm dev
-```
-
-This will run:
-- The Hono API locally via Wrangler (typically on `http://localhost:8787`).
-- The Expo bundler for the mobile app, allowing you to run the app on an iOS simulator, Android emulator, or via the Expo Go app.
-
-### Building
-
-To build all apps and packages:
-
-```sh
 pnpm build
+pnpm lint
+pnpm check-types
 ```
-
-### Other Commands
-
-- `pnpm lint`: Lint all apps and packages.
-- `pnpm check-types`: Check types across the monorepo.
-
-You can also run commands for specific apps using Turborepo filters. For example:
-```sh
-pnpm turbo dev --filter=mobile
-```
-
-## Useful Links
-
-- [Turborepo Documentation](https://turborepo.dev/docs)
-- [Expo Documentation](https://docs.expo.dev/)
-- [Hono Documentation](https://hono.dev/)
-- [Cloudflare Workers](https://developers.cloudflare.com/workers/)

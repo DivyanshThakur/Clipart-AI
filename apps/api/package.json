@@ -2,7 +2,7 @@
   "name": "@clipart-ai/api",
   "type": "module",
   "scripts": {
-    "dev": "wrangler dev",
+    "dev": "concurrently \"wrangler dev --ip 0.0.0.0 --port 8787\" \"ngrok http 8787\"",
     "deploy": "wrangler deploy --minify",
     "format": "prettier --write .",
     "check-types": "tsc --noEmit",
@@ -12,9 +12,11 @@
     "@hono/zod-validator": "^0.7.6",
     "hono": "^4.12.9",
     "nanoid": "^5.1.7",
+    "replicate": "^1.4.0",
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "concurrently": "^9.2.1",
     "wrangler": "^4.4.0"
   }
 }

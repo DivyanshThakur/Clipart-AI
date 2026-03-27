@@ -18,6 +18,7 @@ export interface GenerateRequestBody {
 export interface GenerateResponseBody {
   jobId: string;
   status: 'processing';
+  queuedStyles?: StyleKey[];
 }
 
 export interface ErrorResponseBody {

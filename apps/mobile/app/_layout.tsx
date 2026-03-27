@@ -13,6 +13,7 @@ import {
 } from '@expo-google-fonts/inter';
 import { ThemeProvider, DarkTheme } from '@react-navigation/native';
 import { cssInterop } from 'react-native-css-interop';
+import { ToastViewport } from '../components/ui/toast';
 import '../global.css';
 
 cssInterop(GestureHandlerRootView, {
@@ -47,6 +48,7 @@ export default function RootLayout() {
         <ThemeProvider value={DarkTheme}>
           <StatusBar style="light" />
           <Stack screenOptions={{ headerShown: false }} />
+          <ToastViewport />
         </ThemeProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>

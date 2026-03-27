@@ -13,7 +13,10 @@ const uploadRequestSchema = z.object({
   imageBase64: z.string().min(1, 'imageBase64 is required.'),
 });
 
-const uploadRoute = new Hono<{ Bindings: AppBindings; Variables: AppVariables }>();
+const uploadRoute = new Hono<{
+  Bindings: AppBindings;
+  Variables: AppVariables;
+}>();
 
 uploadRoute.post(
   '/',
@@ -23,9 +26,13 @@ uploadRoute.post(
   }),
   async (c) => {
     const body = c.req.valid('json') as UploadRequestBody;
-    const imageBytes = validateAndDecodeUploadImage(body.imageBase64);
+    const image = validateAndDecodeUploadImage(body.imageBase64);
     const jobId = nanoid();
-    const imageUrl = await uploadImageToReplicate(c.env, imageBytes);
+    const imageUrl = await uploadImageToReplicate(
+      c.env,
+      image.bytes,
+      image.mimeType,
+    );
 
     await createUploadedJob(c.env, {
       imageUrl,
@@ -39,7 +46,7 @@ uploadRoute.post(
     };
 
     return c.json(response, 201);
-  }
+  },
 );
 
 export default uploadRoute;

@@ -1,12 +1,3 @@
-export interface ReplicateFileUploadResponse {
-  id?: string;
-  url?: string;
-  urls?: {
-    get?: string;
-    download?: string;
-  };
-}
-
 export interface ReplicatePredictionResponse {
   id: string;
   status?: string;

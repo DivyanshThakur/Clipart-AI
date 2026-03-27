@@ -19,7 +19,7 @@
   ],
   "env": {
     "production": {
-      "name": "api-production",
+      "name": "clipart-api",
       "vars": {
         "ENVIRONMENT": "production",
         "PUBLIC_API_BASE_URL": "https://clipart-api.divyanshthakur.com"

@@ -5,15 +5,21 @@ import { Image as ImageIcon, CircleAlert } from 'lucide-react-native';
 interface UploadDropzoneProps {
   onPress?: () => void;
   error?: string;
+  loading?: boolean;
 }
 
-export function UploadDropzone({ onPress, error }: UploadDropzoneProps) {
+export function UploadDropzone({
+  onPress,
+  error,
+  loading = false,
+}: UploadDropzoneProps) {
   const isError = !!error;
 
   return (
     <View className="w-full relative">
       <Pressable
         onPress={onPress}
+        disabled={loading}
         className={`relative h-72 w-full items-center justify-center rounded-[24px] border-2 border-dashed bg-surface_container_lowest active:opacity-90 ${
           isError ? 'border-error' : 'border-outline_variant'
         }`}
@@ -43,14 +49,18 @@ export function UploadDropzone({ onPress, error }: UploadDropzoneProps) {
             isError ? 'text-error' : 'text-on_surface'
           }`}
         >
-          {isError ? error : 'Tap to upload'}
+          {loading ? 'Preparing image...' : isError ? error : 'Tap to upload'}
         </Text>
         <Text
           className={`text-center text-xs font-medium uppercase tracking-[1.2px] ${
             isError ? 'text-secondary opacity-60' : 'text-secondary'
           }`}
         >
-          {isError ? 'PLEASE USE PNG OR JPG' : 'Or use camera'}
+          {loading
+            ? 'Keeping face detail intact'
+            : isError
+              ? 'USE A CLEAR JPG OR PNG'
+              : 'Front-facing portrait works best'}
         </Text>
       </Pressable>
     </View>

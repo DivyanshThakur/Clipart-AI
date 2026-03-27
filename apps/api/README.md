@@ -6,6 +6,22 @@
 
 In development, mobile clients should call the local Worker URL while Replicate webhooks should target the ngrok URL through `PUBLIC_API_BASE_URL`.
 
+## Which URL Goes Where
+
+- `EXPO_PUBLIC_API_URL` belongs to the Expo app and is used for normal frontend to backend requests.
+- `PUBLIC_API_BASE_URL` belongs to the Worker config and is used only for webhook callbacks from Replicate.
+
+Example local flow:
+
+- Expo app calls `http://localhost:8787/upload`
+- API creates a Replicate prediction
+- API tells Replicate to send the result to `https://earthbound-irritatedly-alethea.ngrok-free.dev/webhook/replicate/:jobId/:style`
+
+If you run the Expo app on a physical phone, `localhost` will point to the phone itself, not your computer. In that case:
+
+- set `EXPO_PUBLIC_API_URL` to `http://YOUR_COMPUTER_LAN_IP:8787`
+- start Wrangler with `pnpm --filter @clipart-ai/api exec wrangler dev --ip 0.0.0.0 --port 8787`
+
 ## KV Setup
 
 Create the KV namespaces first:
@@ -47,17 +63,19 @@ pnpm --filter @clipart-ai/api deploy --env production
 
 ## Secrets
 
+For local dev, create `apps/api/.dev.vars` from [apps/api/.dev.vars.example](/Users/divyanshthakur/Documents/GitHub/clipart-ai/apps/api/.dev.vars.example).
+
+The Worker now uses built-in style model configs for identity-preserving generation, so you only need the Replicate API token and webhook secret in local and production environments.
+
 Set secrets for both the default environment and production:
 
 ```txt
 pnpm --filter @clipart-ai/api exec wrangler secret put REPLICATE_API_TOKEN
-pnpm --filter @clipart-ai/api exec wrangler secret put REPLICATE_MODEL_REF
 pnpm --filter @clipart-ai/api exec wrangler secret put REPLICATE_WEBHOOK_SECRET
 ```
 
 ```txt
 pnpm --filter @clipart-ai/api exec wrangler secret put REPLICATE_API_TOKEN --env production
-pnpm --filter @clipart-ai/api exec wrangler secret put REPLICATE_MODEL_REF --env production
 pnpm --filter @clipart-ai/api exec wrangler secret put REPLICATE_WEBHOOK_SECRET --env production
 ```
 

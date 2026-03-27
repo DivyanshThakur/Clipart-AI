@@ -1,100 +1,100 @@
-import React, { useState } from 'react';
-import { View, Text, Pressable, FlatList, useWindowDimensions } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { ChevronLeft } from 'lucide-react-native';
+import React from 'react';
+import { Alert, FlatList, Pressable, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useShallow } from 'zustand/react/shallow';
+import { AppScreen, ScreenContainer } from '../components/layout/AppScreen';
+import { ScreenHeader } from '../components/navigation/ScreenHeader';
 import { StyleCard } from '../components/style-card/StyleCard';
 import { Button } from '../components/ui/Button';
+import { STYLE_OPTIONS } from '../constants/styles';
+import { useGeneration } from '../hooks/useGeneration';
+import { useGoHome } from '../hooks/useGoHome';
+import { useResponsiveGrid } from '../hooks/useResponsiveGrid';
+import { useGenerationStore } from '../store/generationStore';
+import type { StyleKey } from '../types';
 
-const STYLES = [
-  { id: 'anime', name: 'Anime', image: require('../assets/images/anime.png') },
-  { id: 'cartoon', name: 'Cartoon', image: require('../assets/images/cartoon.png') },
-  { id: 'pixel_art', name: 'Pixel Art', image: require('../assets/images/pixel_art.png') },
-  { id: 'flat_illustration', name: 'Flat Illustration', image: require('../assets/images/flat_illustration.png') },
-  { id: 'sketch', name: 'Sketch', image: require('../assets/images/sketch.png') },
-  { id: 'comic_book', name: 'Comic Book', image: require('../assets/images/comic_book.png') },
-];
+type StyleGridItem = (typeof STYLE_OPTIONS)[number] | { key: `placeholder-${number}`; isPlaceholder: true };
 
 export default function StyleSelectionScreen() {
   const router = useRouter();
-  const { width } = useWindowDimensions();
-  const [selectedStyles, setSelectedStyles] = useState<string[]>([]);
-  
-  // Adjusted column calculation for better proportions
-  const numColumns = width < 450 ? 2 : width < 900 ? 3 : 4;
-  const horizontalPadding = width < 500 ? 'px-4' : 'px-8';
+  const goHome = useGoHome();
+  const { imageUri, selectedStyles, setSelectedStyles } = useGenerationStore(
+    useShallow((state) => ({
+      imageUri: state.imageUri,
+      selectedStyles: state.selectedStyles,
+      setSelectedStyles: state.setSelectedStyles,
+    }))
+  );
+  const { generate, loading } = useGeneration();
+  const { horizontalPaddingClassName, numColumns, paddedItems } =
+    useResponsiveGrid<StyleGridItem, StyleGridItem>(
+      STYLE_OPTIONS,
+      (index) => ({ key: `placeholder-${index}`, isPlaceholder: true })
+    );
 
-  const toggleStyle = (id: string) => {
-    setSelectedStyles(prev => 
-      prev.includes(id) ? prev.filter(s => s !== id) : [...prev, id]
+  const toggleStyle = (id: StyleKey) => {
+    setSelectedStyles((previous) =>
+      previous.includes(id) ? previous.filter((style) => style !== id) : [...previous, id]
     );
   };
 
   const selectAll = () => {
-    if (selectedStyles.length === STYLES.length) {
+    if (selectedStyles.length === STYLE_OPTIONS.length) {
       setSelectedStyles([]);
-    } else {
-      setSelectedStyles(STYLES.map(s => s.id));
+      return;
     }
+
+    setSelectedStyles(STYLE_OPTIONS.map((style) => style.key));
   };
 
-  // Pad data with placeholders to ensure consistent card width in the last row
-  const paddedStyles = React.useMemo(() => {
-    const arr: any[] = [...STYLES];
-    const numToPad = (numColumns - (STYLES.length % numColumns)) % numColumns;
-    for (let i = 0; i < numToPad; i++) {
-      arr.push({ id: `placeholder-${i}`, name: '', image: null, isPlaceholder: true });
+  const handleGenerate = async () => {
+    if (!imageUri) {
+      Alert.alert('Image required', 'Please go back and choose an image first.');
+      return;
     }
-    return arr;
-  }, [numColumns]);
+
+    await generate(imageUri, selectedStyles);
+  };
 
   return (
-    <SafeAreaView className="flex-1 bg-background" edges={['top', 'bottom']}>
+    <AppScreen>
       <View className="flex-1 items-center">
-        <View 
-          className={`w-full ${horizontalPadding}`}
-          style={{ maxWidth: 1200 }}
-        >
-          {/* Style Selection Grid */}
+        <ScreenContainer horizontalPaddingClassName={horizontalPaddingClassName}>
           <FlatList
             key={numColumns}
-            data={paddedStyles}
+            data={paddedItems}
             numColumns={numColumns}
-            keyExtractor={item => item.id}
-            ListHeaderComponent={(
+            keyExtractor={(item) => item.key}
+            ListHeaderComponent={
               <View>
-                {/* Header */}
-                <View className="mb-2 h-14 flex-row items-center justify-between">
-                  <Pressable 
-                    onPress={() => router.back()} 
-                    className="h-10 w-10 items-center justify-center rounded-full bg-surface_container_low active:opacity-70"
-                  >
-                    <ChevronLeft size={20} color="#e5e2e1" />
-                  </Pressable>
-                  <Text className="font-bold text-[20px] leading-7 text-on_surface">Style Selection</Text>
-                  <View className="w-10" />
-                </View>
+                <ScreenHeader
+                  title="Style Selection"
+                  onBack={() => router.back()}
+                  onHome={goHome}
+                />
 
-                {/* Select All Action */}
                 <View className="mb-4 flex-row justify-end px-2">
                   <Pressable onPress={selectAll} hitSlop={15}>
                     <Text className="font-semibold text-[14px] text-tertiary">
-                      {selectedStyles.length === STYLES.length ? 'Deselect All' : 'Select All'}
+                      {selectedStyles.length === STYLE_OPTIONS.length ? 'Deselect All' : 'Select All'}
                     </Text>
                   </Pressable>
                 </View>
               </View>
-            )}
-            renderItem={({ item }: { item: any }) => {
-              if (item.isPlaceholder) {
-                return <View className="flex-1 m-1.5" />;
+            }
+            renderItem={({ item }) => {
+              if ('isPlaceholder' in item && item.isPlaceholder) {
+                return <View className="m-1.5 flex-1" />;
               }
+
+              const styleItem = item as (typeof STYLE_OPTIONS)[number];
+
               return (
                 <StyleCard
-                  id={item.id}
-                  name={item.name}
-                  image={item.image}
-                  selected={selectedStyles.includes(item.id)}
+                  id={styleItem.key}
+                  name={styleItem.name}
+                  image={styleItem.image}
+                  selected={selectedStyles.includes(styleItem.key)}
                   onSelect={toggleStyle}
                 />
               );
@@ -102,20 +102,26 @@ export default function StyleSelectionScreen() {
             showsVerticalScrollIndicator={false}
             contentContainerStyle={{ paddingBottom: 120 }}
           />
-        </View>
+        </ScreenContainer>
 
         <View className="absolute bottom-8 left-6 right-6 max-w-[500px] self-center">
           <Button
-            disabled={selectedStyles.length === 0}
-            className={`w-full py-4 rounded-[20px] ${selectedStyles.length === 0 ? 'bg-outline opacity-40' : 'bg-tertiary'}`}
-            onPress={() => router.push('/results')}
+            disabled={selectedStyles.length === 0 || loading}
+            className={`w-full rounded-[20px] py-4 ${
+              selectedStyles.length === 0 || loading ? 'bg-outline opacity-40' : 'bg-tertiary'
+            }`}
+            onPress={() => {
+              void handleGenerate();
+            }}
           >
             <Text className="text-base font-bold text-white">
-              Generate {selectedStyles.length} Variation{selectedStyles.length !== 1 ? 's' : ''}
+              {loading
+                ? 'Starting...'
+                : `Generate ${selectedStyles.length} Variation${selectedStyles.length !== 1 ? 's' : ''}`}
             </Text>
           </Button>
         </View>
       </View>
-    </SafeAreaView>
+    </AppScreen>
   );
 }
